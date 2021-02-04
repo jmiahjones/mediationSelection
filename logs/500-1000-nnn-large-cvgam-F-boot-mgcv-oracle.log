@@ -1,0 +1,4 @@
+running
+  '/usr/lib64/R/bin/R --slave --no-restore --file=var-selection-sim-cv.R --args 500 1000 nnn large cvgam F boot-mgcv-oracle'
+
+Fatal error: cannot open file 'var-selection-sim-cv.R': No such file or directory

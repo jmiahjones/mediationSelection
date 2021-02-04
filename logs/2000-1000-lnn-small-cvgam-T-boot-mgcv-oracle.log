@@ -1,0 +1,204 @@
+running
+  '/usr/lib64/R/bin/R --slave --no-restore --file=var-selection-sim-cv.R --args 2000 1000 lnn small cvgam T boot-mgcv-oracle'
+
+Warning message:
+NAs introduced by coercion 
+[1] "2000-1000-lnn-small-cvgam-T-boot-mgcv-oracle"
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: nnls
+Super Learner
+Version: 2.0-24
+Package created on 2018-08-10
+
+Loading required package: Matrix
+Loading required package: foreach
+
+Attaching package: ‘foreach’
+
+The following objects are masked from ‘package:purrr’:
+
+    accumulate, when
+
+Loaded glmnet 2.0-16
+
+Loading required package: nlme
+
+Attaching package: ‘nlme’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+This is mgcv 1.8-29. For overview type 'help("mgcv-package")'.
+Loading required package: Formula
+Loading required package: plotmo
+Loading required package: plotrix
+Loading required package: TeachingDemos
+randomForest 4.6-14
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+Loading required package: iterators
+[1] "Created data."
+[1] "SL: Y"
+[1] "SL: MD"
+[1] "Estimated mu-hats with SuperLearner."
+[1] "Finished lasso simulations: mixture."
+[1] "Finished lasso simulations: product."
+[1] "Finished lasso simulations: adaptive."
+[1] "Finished inference technique: 1"
+[1] "Finished lasso simulations: mixture."
+[1] "Finished lasso simulations: product."
+[1] "Finished lasso simulations: adaptive."
+[1] "Finished inference technique: 2"
+[1] "Finished oracle results."
+[1] "Finished full results."
+[1] "Scenario Complete!"
+Time difference of 18.53125 hours
+  coverage_NDE      NDE_len        coverage_NIE      NIE_len      
+ Min.   :0.000   Min.   :0.7631   Min.   :0.000   Min.   :0.7170  
+ 1st Qu.:1.000   1st Qu.:1.0091   1st Qu.:1.000   1st Qu.:0.9531  
+ Median :1.000   Median :1.0440   Median :1.000   Median :0.9891  
+ Mean   :0.928   Mean   :1.0453   Mean   :0.909   Mean   :0.9891  
+ 3rd Qu.:1.000   3rd Qu.:1.0819   3rd Qu.:1.000   3rd Qu.:1.0233  
+ Max.   :1.000   Max.   :1.2564   Max.   :1.000   Max.   :1.2430  
+    NIE_err            NDE_err           num_noise       num_missed   
+ Min.   :-0.81363   Min.   :-0.94969   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.12024   1st Qu.:-0.23852   1st Qu.:0.000   1st Qu.:0.000  
+ Median : 0.04838   Median :-0.04597   Median :1.000   Median :0.000  
+ Mean   : 0.04818   Mean   :-0.05230   Mean   :1.132   Mean   :0.093  
+ 3rd Qu.: 0.21009   3rd Qu.: 0.11874   3rd Qu.:2.000   3rd Qu.:0.000  
+ Max.   : 0.90046   Max.   : 0.92160   Max.   :7.000   Max.   :2.000  
+   picked_lam         is_missed    
+ Min.   :0.000836   Min.   :0.000  
+ 1st Qu.:0.437018   1st Qu.:0.000  
+ Median :0.956384   Median :0.000  
+ Mean   :1.424102   Mean   :0.085  
+ 3rd Qu.:2.387767   3rd Qu.:0.000  
+ Max.   :3.423950   Max.   :1.000  
+[1] 0.085
+  coverage_NDE      NDE_len        coverage_NIE      NIE_len      
+ Min.   :0.000   Min.   :0.7962   Min.   :0.000   Min.   :0.7111  
+ 1st Qu.:1.000   1st Qu.:1.0097   1st Qu.:1.000   1st Qu.:0.9557  
+ Median :1.000   Median :1.0501   Median :1.000   Median :0.9932  
+ Mean   :0.934   Mean   :1.0508   Mean   :0.916   Mean   :0.9943  
+ 3rd Qu.:1.000   3rd Qu.:1.0880   3rd Qu.:1.000   3rd Qu.:1.0300  
+ Max.   :1.000   Max.   :1.2861   Max.   :1.000   Max.   :1.2205  
+    NIE_err            NDE_err           num_noise       num_missed   
+ Min.   :-0.81363   Min.   :-0.94969   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.12024   1st Qu.:-0.23852   1st Qu.:0.000   1st Qu.:0.000  
+ Median : 0.04838   Median :-0.04597   Median :1.000   Median :0.000  
+ Mean   : 0.04818   Mean   :-0.05230   Mean   :1.132   Mean   :0.093  
+ 3rd Qu.: 0.21009   3rd Qu.: 0.11874   3rd Qu.:2.000   3rd Qu.:0.000  
+ Max.   : 0.90046   Max.   : 0.92160   Max.   :7.000   Max.   :2.000  
+   picked_lam         is_missed    
+ Min.   :0.000836   Min.   :0.000  
+ 1st Qu.:0.437018   1st Qu.:0.000  
+ Median :0.956384   Median :0.000  
+ Mean   :1.424102   Mean   :0.085  
+ 3rd Qu.:2.387767   3rd Qu.:0.000  
+ Max.   :3.423950   Max.   :1.000  
+[1] 0.085
+  coverage_NDE      NDE_len        coverage_NIE    NIE_len      
+ Min.   :0.000   Min.   :0.4179   Min.   :0.0   Min.   :0.2218  
+ 1st Qu.:1.000   1st Qu.:0.9922   1st Qu.:1.0   1st Qu.:0.9304  
+ Median :1.000   Median :1.0564   Median :1.0   Median :0.9956  
+ Mean   :0.828   Mean   :1.0316   Mean   :0.8   Mean   :0.9670  
+ 3rd Qu.:1.000   3rd Qu.:1.1157   3rd Qu.:1.0   3rd Qu.:1.0616  
+ Max.   :1.000   Max.   :1.5208   Max.   :1.0   Max.   :1.4499  
+    NIE_err             NDE_err            num_noise       num_missed   
+ Min.   :-0.810751   Min.   :-0.953825   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.200280   1st Qu.:-0.204702   1st Qu.:0.000   1st Qu.:0.000  
+ Median : 0.009309   Median :-0.011516   Median :1.000   Median :0.000  
+ Mean   :-0.010809   Mean   : 0.006829   Mean   :1.282   Mean   :0.303  
+ 3rd Qu.: 0.182046   3rd Qu.: 0.204051   3rd Qu.:2.000   3rd Qu.:1.000  
+ Max.   : 0.901177   Max.   : 0.918449   Max.   :6.000   Max.   :2.000  
+   picked_lam         is_missed    
+ Min.   :0.005508   Min.   :0.000  
+ 1st Qu.:0.404907   1st Qu.:0.000  
+ Median :0.904794   Median :0.000  
+ Mean   :1.242165   Mean   :0.256  
+ 3rd Qu.:1.809589   3rd Qu.:1.000  
+ Max.   :3.423950   Max.   :1.000  
+[1] 0.256
+  coverage_NDE     NDE_len        coverage_NIE      NIE_len      
+ Min.   :0.00   Min.   :0.4711   Min.   :0.000   Min.   :0.2859  
+ 1st Qu.:1.00   1st Qu.:1.0204   1st Qu.:1.000   1st Qu.:0.9581  
+ Median :1.00   Median :1.0791   Median :1.000   Median :1.0199  
+ Mean   :0.88   Mean   :1.0813   Mean   :0.868   Mean   :1.0179  
+ 3rd Qu.:1.00   3rd Qu.:1.1539   3rd Qu.:1.000   3rd Qu.:1.0988  
+ Max.   :1.00   Max.   :1.5015   Max.   :1.000   Max.   :1.4704  
+    NIE_err             NDE_err            num_noise       num_missed   
+ Min.   :-0.810751   Min.   :-0.953825   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.200280   1st Qu.:-0.204702   1st Qu.:0.000   1st Qu.:0.000  
+ Median : 0.009309   Median :-0.011516   Median :1.000   Median :0.000  
+ Mean   :-0.010809   Mean   : 0.006829   Mean   :1.282   Mean   :0.303  
+ 3rd Qu.: 0.182046   3rd Qu.: 0.204051   3rd Qu.:2.000   3rd Qu.:1.000  
+ Max.   : 0.901177   Max.   : 0.918449   Max.   :6.000   Max.   :2.000  
+   picked_lam         is_missed    
+ Min.   :0.005508   Min.   :0.000  
+ 1st Qu.:0.404907   1st Qu.:0.000  
+ Median :0.904794   Median :0.000  
+ Mean   :1.242165   Mean   :0.256  
+ 3rd Qu.:1.809589   3rd Qu.:1.000  
+ Max.   :3.423950   Max.   :1.000  
+[1] 0.256
+  coverage_NDE      NDE_len        coverage_NIE      NIE_len      
+ Min.   :0.000   Min.   :0.3628   Min.   :0.000   Min.   :0.1459  
+ 1st Qu.:0.000   1st Qu.:0.9205   1st Qu.:0.000   1st Qu.:0.8181  
+ Median :1.000   Median :1.0670   Median :1.000   Median :0.9918  
+ Mean   :0.743   Mean   :1.0509   Mean   :0.724   Mean   :0.9665  
+ 3rd Qu.:1.000   3rd Qu.:1.2118   3rd Qu.:1.000   3rd Qu.:1.1528  
+ Max.   :1.000   Max.   :1.9003   Max.   :1.000   Max.   :1.8549  
+    NIE_err           NDE_err          num_noise       num_missed   
+ Min.   :-0.8109   Min.   :-0.8797   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.3391   1st Qu.:-0.1197   1st Qu.:1.000   1st Qu.:0.000  
+ Median :-0.1180   Median : 0.1086   Median :2.000   Median :0.000  
+ Mean   :-0.1182   Mean   : 0.1145   Mean   :1.762   Mean   :0.561  
+ 3rd Qu.: 0.1055   3rd Qu.: 0.3413   3rd Qu.:3.000   3rd Qu.:1.000  
+ Max.   : 0.8719   Max.   : 0.9807   Max.   :6.000   Max.   :2.000  
+   picked_lam        is_missed    
+ Min.   :0.00406   Min.   :0.000  
+ 1st Qu.:0.42799   1st Qu.:0.000  
+ Median :0.98327   Median :0.000  
+ Mean   :1.34473   Mean   :0.457  
+ 3rd Qu.:2.07867   3rd Qu.:1.000  
+ Max.   :3.42395   Max.   :1.000  
+[1] 0.457
+  coverage_NDE      NDE_len        coverage_NIE      NIE_len      
+ Min.   :0.000   Min.   :0.3839   Min.   :0.000   Min.   :0.1556  
+ 1st Qu.:1.000   1st Qu.:1.0564   1st Qu.:1.000   1st Qu.:0.9648  
+ Median :1.000   Median :1.1923   Median :1.000   Median :1.1183  
+ Mean   :0.864   Mean   :1.1811   Mean   :0.866   Mean   :1.0971  
+ 3rd Qu.:1.000   3rd Qu.:1.3371   3rd Qu.:1.000   3rd Qu.:1.2727  
+ Max.   :1.000   Max.   :1.9393   Max.   :1.000   Max.   :1.8673  
+    NIE_err           NDE_err          num_noise       num_missed   
+ Min.   :-0.8109   Min.   :-0.8797   Min.   :0.000   Min.   :0.000  
+ 1st Qu.:-0.3391   1st Qu.:-0.1197   1st Qu.:1.000   1st Qu.:0.000  
+ Median :-0.1180   Median : 0.1086   Median :2.000   Median :0.000  
+ Mean   :-0.1182   Mean   : 0.1145   Mean   :1.762   Mean   :0.561  
+ 3rd Qu.: 0.1055   3rd Qu.: 0.3413   3rd Qu.:3.000   3rd Qu.:1.000  
+ Max.   : 0.8719   Max.   : 0.9807   Max.   :6.000   Max.   :2.000  
+   picked_lam        is_missed    
+ Min.   :0.00406   Min.   :0.000  
+ 1st Qu.:0.42799   1st Qu.:0.000  
+ Median :0.98327   Median :0.000  
+ Mean   :1.34473   Mean   :0.457  
+ 3rd Qu.:2.07867   3rd Qu.:1.000  
+ Max.   :3.42395   Max.   :1.000  
+[1] 0.457
