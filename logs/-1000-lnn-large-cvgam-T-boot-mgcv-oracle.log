@@ -1,0 +1,5 @@
+running
+  '/software/r/3.6.1/b1/lib64/R/bin/R --slave --no-restore --file=./R/var-selection-sim-cv.R --args 1000 lnn large cvgam T boot-mgcv-oracle'
+
+Error: length(args) %in% (7:8) is not TRUE
+Execution halted

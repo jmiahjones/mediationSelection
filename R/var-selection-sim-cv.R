@@ -5,10 +5,10 @@ args = commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   stop("No commandline arguments found!")
 }
-# 
-# # abbv_scn <- "nnl"
-# 
-stopifnot(length(args)==7)
+
+DEFAULT_CORES <- 20
+
+stopifnot(length(args) %in% (7:8))
 n <- as.numeric(args[1])
 num_simulations <- as.numeric(args[2])
 abbv_scn <- args[3]
@@ -16,6 +16,7 @@ coef_setting <- args[4]
 weight_gam <- as.numeric(args[5])
 use_sl <- args[6]
 suffix_arg <- args[7]
+cores <- as.numeric(args[8])
 
 
 if(is.na(weight_gam)){
@@ -24,6 +25,10 @@ if(is.na(weight_gam)){
   weight_gam <- c(1,2,3)
 } else {
   weight_gam_str <- weight_gam
+}
+
+if(is.na(cores)){
+  cores <- DEFAULT_CORES
 }
 
 # stopifnot(basename(getwd()) == "pseudo-mse-with-ml")
@@ -119,6 +124,7 @@ library(randomForest)
 library(parallel)
 library(doParallel)
 library(foreach)
+print(sessionInfo())
 
 
 candidate.mediators = paste0("m.", 1:p)
@@ -279,7 +285,7 @@ folds <- caret::createFolds(y=1:n, k=V)
 set.seed(841665)
 split_folds <- caret::createFolds(y=1:n, k=splits)
 
-cl <- parallel::makeCluster(24, "FORK", outfile=logfile)
+cl <- parallel::makeCluster(cores, "FORK", outfile=logfile)
 doParallel::registerDoParallel(cl)
 parallel::clusterSetRNGStream(cl, 2018)
 
