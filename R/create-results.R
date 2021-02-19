@@ -33,7 +33,7 @@ file_idxs <- which(
 
 
 naive_delta_inf <- function(dc, m_0, y_0, sel_M_idxs, ret_est=F){
-  m_sel <- m_0[,sel_M_idxs]
+  m_sel <- as.matrix(m_0[,sel_M_idxs])
   p_sel <- ncol(m_sel)
   even_idx_sel <- 2*(1:p_sel)
   sel_naive_fit_y <- lm(y_0 ~ dc + m_sel)
