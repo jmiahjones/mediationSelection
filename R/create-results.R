@@ -23,7 +23,6 @@ weight_names <- c("prd", "mix", "adp")
 method_names <- c("das", "minnier")
 
 filenames <- dir("./cache/", pattern = "*selection.RData")
-filenames <- filenames[grep("500.+\\.RData", filenames, perl = T)]
 filenames <- paste0("./cache/", filenames)
 
 num_to_do <- length(filenames)
