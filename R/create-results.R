@@ -23,6 +23,7 @@ weight_names <- c("prd", "mix", "adp")
 method_names <- c("das", "minnier")
 
 filenames <- dir("./cache/", pattern = "*selection.RData")
+filenames <- filenames[grep("500.+\\.RData", filenames, perl = T)]
 filenames <- paste0("./cache/", filenames)
 
 num_to_do <- length(filenames)
@@ -161,8 +162,10 @@ temp_res <- foreach(file.idx=file_idxs, .combine=rbind) %do% {
     )
   }
 
-  naive_df %>% group_by(-val) %>% summarize(val=mean(val)) %>%
-    ungroup %>% rbind(res_df) %>% return
+  naive_df %>% group_by_at(vars(!val)) %>% 
+    summarize(val=mean(val)) %>% ungroup %>%
+    rbind(res_df) %>% 
+    return
   # %>% filter(col=="coverage_NDE", boot_method=="naive") %>% head
   # return(res_df)
 }
