@@ -1,2 +1,2 @@
-sbatch-result.sh
-sbatch-allres.sh
+sbatch-results.sh
+sbatch-results-rest.sh

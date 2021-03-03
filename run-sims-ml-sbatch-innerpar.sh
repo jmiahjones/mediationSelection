@@ -1,22 +1,23 @@
 #!/bin/bash
 
-n=4000
+ns=(500 1000 2000 4000)
 usesl=T
 num_sims=1000
-suffix="boot-mgcv-oracle"
+suffix="boot-refactor"
 weightgam=cvgam
 # cores="default"
 
 scenarios=(lll lnn nnn)
 coefsizes=(large small)
 
-scenidx=$(($SLURM_ARRAY_TASK_ID / 2))
-coefidx=$(($SLURM_ARRAY_TASK_ID % 2))
-
+# go coefsize -> scenario -> n
+coefidx=$(($SLURM_ARRAY_TASK_ID / 12))
+scenidx=$((($SLURM_ARRAY_TASK_ID % 12) / 4))
+nidx=$((($SLURM_ARRAY_TASK_ID % 12) % 4))
 
 scenario=${scenarios[$scenidx]}
 coefsize=${coefsizes[$coefidx]}
-
+n=${ns[$nidx]}
 echo "scenario=$scenario"
 echo "coefsize=$coefsize"
 
@@ -24,7 +25,7 @@ echo "coefsize=$coefsize"
 # for scenario in lnn lll nnn; do
 #   for coefsize in large small; do
 #       echo "Beginning scenario $scenario."
-      Rscript --verbose ./R/var-selection-sim-cv.R $n $num_sims $scenario $coefsize \
+      Rscript --verbose ./R/main.R $n $num_sims $scenario $coefsize \
         $weightgam $usesl $suffix $cores \
         > ./logs/$n-$num_sims-$scenario-$coefsize-$weightgam-$usesl-$suffix.log \
         2>&1

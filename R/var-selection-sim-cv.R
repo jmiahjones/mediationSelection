@@ -1,301 +1,264 @@
 #
 # Author: Jeremiah Jones
 # rm(list=objects())
-args = commandArgs(trailingOnly=TRUE)
-if(length(args)==0){
-  stop("No commandline arguments found!")
-}
 
-DEFAULT_CORES <- 20
-
-stopifnot(length(args) %in% (7:8))
-n <- as.numeric(args[1])
-num_simulations <- as.numeric(args[2])
-abbv_scn <- args[3]
-coef_setting <- args[4]
-weight_gam <- as.numeric(args[5])
-use_sl <- args[6]
-suffix_arg <- args[7]
-cores <- as.numeric(args[8])
-
-
-if(is.na(weight_gam)){
-  # weight_gam was not numeric, so assume we want to cv it
-  weight_gam_str <- gsub(" ", "", args[5])
-  weight_gam <- c(1,2,3)
-} else {
-  weight_gam_str <- weight_gam
-}
-
-if(is.na(cores)){
-  cores <- DEFAULT_CORES
-}
-
-# stopifnot(basename(getwd()) == "pseudo-mse-with-ml")
-
-
-# n <- 500
-# num_simulations <- 5
-# abbv_scn <- "lnn"
-# suffix <- "ml"
-
-####################
-## parameters
-# n = 2000
-# num_simulations = 200
-num_noise = 7
-
-num_bootstraps=1000L
-small.setting <- substr(coef_setting, 1,1)=="s"
-is.randomized <- substr(abbv_scn, 1,1)=="r"
-
-if(small.setting){
-  # small
-  # chose alphas*betas=16/sqrt(n) for the first 3 mediators
-  alphas = c(4, 4*n^(1/4), 4*n^(1/4), rep(0, num_noise)) # D-M coef
-  betas = c(4, 4*n^(-1/4), 4*n^(-1/4), rep(0,num_noise)) # M-Y coef
-  alphas = alphas/(n^(1/4))
-  betas = betas/(n^(1/4))
-} else {
-  # nonsmall
-  # chose alphas*betas=.8 + O(1/n) for the first 3 mediators
-  alpha0 <- c(1, 2, 2, rep(0, num_noise))
-  beta0 <- c(.8, .4, .4, rep(0, num_noise))
-  # alpha.h = c(rep(1, 3), rep(1, num_noise)) # D-M coef
-  # beta.h = c(rep(1, 3), rep(0, num_noise)) # M-Y coef
-  alphas = alpha0 #+ alpha.h/(n^(1/2))
-  betas = beta0 #+ beta.h/(n^(1/2))
-}
-
-
-
-noise = c(0,0,0,rep(0,num_noise))
-variances <- c(1,1,1, rep(1, num_noise-1), 1)
-NDE = 2
-NIE = sum(alphas * betas)
-rho = 0.0 # covariance between errors
-rho2 = 0.0 # noise covariance
-corr_meds = c(1,9)
-p = length(alphas)
-covariates_size = 5
-V = 10 # number of folds for crossvalidation
-splits = ifelse(n<2000, 4L, 2L) # number of sample splits for cross-fitting
-####################
-
-####################
-#### Files ####
-####################
-savefile_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
-                         weight_gam_str, use_sl, suffix_arg, sep="-")
-print(savefile_suffix)
-slfile_y_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
-                         suffix_arg, sep="-")
-slfile_md_suffix <- paste(n, num_simulations, substr(abbv_scn, 1,2), 
-                          coef_setting,
-                          suffix_arg, sep="-")
-
-logfile <- paste0("./logs/", savefile_suffix, "-var-selection.stdout")
-savefile <- paste0("./cache/", savefile_suffix, "-var-selection.RData")
-slfile_y <- paste0("./cache/sl/", slfile_y_suffix, "-train-y.RData")
-slfile_md <- paste0("./cache/sl/", slfile_md_suffix, "-train-md.RData")
-
-if(!dir.exists("./logs")){
-  dir.create("./logs")
-}
-if(!dir.exists("./cache")){
-  dir.create("./cache")
-}
-if(file.exists(logfile)){
-  file.remove(logfile)
-}
-
-start = Sys.time()
-
-library(dplyr)
-library(purrr)
-library(SuperLearner)
-library(glmnet)
-# library(gam)
-library(mgcv)
-library(earth)
-library(randomForest)
-# library(e1071)
-# library(xgboost)
-library(parallel)
-library(doParallel)
-library(foreach)
-print(sessionInfo())
-
-
-candidate.mediators = paste0("m.", 1:p)
-true_M <- which(alphas*betas != 0)
-oracle.mediators <- candidate.mediators[true_M]
-x.cols = paste0("x.", 1:covariates_size)
-
-expit <- plogis
-
-########################
-## Confounding Mechanisms
-########################
-
-if(substr(abbv_scn, 1,1)=="n"){
-  # nonlinear function
-  propensity <- function(x) {
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    # expit((0*x1 + 1*x2 + 0*x3 + 0*x4 + 0*x5+0*x1^2*x2+ 1*x1*x3 - 0)/1)
-    expit((x2 + x1*x2)/1.25)
+main <- function(
+  n,
+  num_simulations,
+  abbv_scn,
+  coef_setting,
+  weight_gam,
+  use_sl,
+  suffix_arg,
+  cores
+) {
+  
+  assertthat::assert_that(is.logical(use_sl))
+  
+  ######################## Load Procedures ########################
+  # need this in the function environment
+  source("./R/simulation-helpers.R")
+  source("./R/mediation-funs-postsel.R")
+  source("./R/estimate-nuisance.R", local=T) 
+  
+  num_noise = 7
+  
+  num_bootstraps=100L
+  small.setting <- substr(coef_setting, 1,1)=="s"
+  is.randomized <- substr(abbv_scn, 1,1)=="r"
+  
+  if(small.setting){
+    # small
+    # chose alphas*betas=16/sqrt(n) for the first 3 mediators
+    alphas = c(4, 4*n^(1/4), 4*n^(1/4), rep(0, num_noise)) # D-M coef
+    betas = c(4, 4*n^(-1/4), 4*n^(-1/4), rep(0,num_noise)) # M-Y coef
+    alphas = alphas/(n^(1/4))
+    betas = betas/(n^(1/4))
+  } else {
+    # nonsmall
+    # chose alphas*betas=.8 + O(1/n) for the first 3 mediators
+    alpha0 <- c(1, 2, 2, rep(0, num_noise))
+    beta0 <- c(.8, .4, .4, rep(0, num_noise))
+    # alpha.h = c(rep(1, 3), rep(1, num_noise)) # D-M coef
+    # beta.h = c(rep(1, 3), rep(0, num_noise)) # M-Y coef
+    alphas = alpha0 #+ alpha.h/(n^(1/2))
+    betas = beta0 #+ beta.h/(n^(1/2))
   }
-} else if(substr(abbv_scn, 1,1)=="l"){
-  # linear function
-  propensity <- function(x) {
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    expit((0*x1 + 1*x2 + 0*x3 + 0*x4 + 0*x5+0*x1^2*x2+0*x1*x3 - 0)/1)
+  
+  
+  
+  noise = c(0,0,0,rep(0,num_noise))
+  variances <- c(1,1,1, rep(1, num_noise-1), 1)
+  NDE = 2
+  NIE = sum(alphas * betas)
+  rho = 0.0 # covariance between errors
+  rho2 = 0.0 # noise covariance
+  corr_meds = c(1,9)
+  p = length(alphas)
+  covariates_size = 5
+  V = 10 # number of folds for crossvalidation
+  splits = ifelse(n<2000, 4L, 2L) # number of sample splits for cross-fitting
+  
+  
+  
+  ################# Initialization ########################
+  
+  start = Sys.time()
+  
+  library(dplyr)
+  library(tidyr)
+  library(purrr)
+  library(SuperLearner)
+  library(glmnet)
+  # library(gam)
+  library(mgcv)
+  library(earth)
+  library(randomForest)
+  # library(e1071)
+  # library(xgboost)
+  library(parallel)
+  library(doParallel)
+  library(foreach)
+  # print(sessionInfo())
+  
+  
+  candidate.mediators = paste0("m.", 1:p)
+  true_M <- which(alphas*betas != 0)
+  oracle.mediators <- candidate.mediators[true_M]
+  x.cols = paste0("x.", 1:covariates_size)
+  expit <- plogis
+  
+  # Setup a lambda grid
+  lambda.len = 301
+  lambdas = n^(-0.75)*(2^seq(from=-2, to=10, length.out=lambda.len))
+  
+  set.seed(841664)
+  folds <- caret::createFolds(y=1:n, k=V)
+  set.seed(841665)
+  split_folds <- caret::createFolds(y=1:n, k=splits)
+  
+  ################# Files ########################
+  
+  savefile_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
+                           weight_gam_str, use_sl, suffix_arg, sep="-")
+  # print(savefile_suffix)
+  slfile_y_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
+                           suffix_arg, sep="-")
+  slfile_md_suffix <- paste(n, num_simulations, substr(abbv_scn, 1,2), 
+                            coef_setting,
+                            suffix_arg, sep="-")
+  
+  logfile <- paste0("./logs/", savefile_suffix, "-var-selection.stdout")
+  savefile <- paste0("./cache/", savefile_suffix, "-var-selection.RData")
+  slfile_y <- paste0("./cache/sl/", slfile_y_suffix, "-train-y.RData")
+  slfile_md <- paste0("./cache/sl/", slfile_md_suffix, "-train-md.RData")
+  
+  if(!dir.exists("./logs")){
+    dir.create("./logs")
   }
-} else if(substr(abbv_scn, 1,1)=="r"){
-  # linear function
-  propensity <- function(x) {
-    0.5
+  if(!dir.exists("./cache")){
+    dir.create("./cache")
   }
-}
-
-
-if(substr(abbv_scn, 2,2)=="n"){
-  # nonlinear function
-  psi_m <- function(x) { 
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    1*x1^2 + x2 # 0*x3 - 0*x4 - 0*x5 + 0*x2*(x1-0.5)^2
+  if(file.exists(logfile)){
+    file.remove(logfile)
   }
-} else if(substr(abbv_scn, 2,2)=="l"){
-  # linear function
-  psi_m <- function(x) { 
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    1*x1 + x2
+  
+  
+  
+  #################### Confounding Mechanisms ########################
+  
+  
+  if(substr(abbv_scn, 1,1)=="n"){
+    # nonlinear function
+    propensity <- function(x) {
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      # expit((0*x1 + 1*x2 + 0*x3 + 0*x4 + 0*x5+0*x1^2*x2+ 1*x1*x3 - 0)/1)
+      expit((x2 + x1*x2)/1.25)
+    }
+  } else if(substr(abbv_scn, 1,1)=="l"){
+    # linear function
+    propensity <- function(x) {
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      expit((0*x1 + 1*x2 + 0*x3 + 0*x4 + 0*x5+0*x1^2*x2+0*x1*x3 - 0)/1)
+    }
+  } else if(substr(abbv_scn, 1,1)=="r"){
+    # linear function
+    propensity <- function(x) {
+      0.5
+    }
   }
-}
-
-
-
-if(substr(abbv_scn, 3,3)=="n"){
-  # nonlinear function
-  psi_y <- function(x) {
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    1*(2*(x1-0.5)^2 + x2 + 2*x3 - x4 - x5)
+  
+  
+  if(substr(abbv_scn, 2,2)=="n"){
+    # nonlinear function
+    psi_m <- function(x) { 
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      1*x1^2 + x2 # 0*x3 - 0*x4 - 0*x5 + 0*x2*(x1-0.5)^2
+    }
+  } else if(substr(abbv_scn, 2,2)=="l"){
+    # linear function
+    psi_m <- function(x) { 
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      1*x1 + x2
+    }
   }
-} else if(substr(abbv_scn, 3,3)=="l"){
-  # linear function
-  psi_y <- function(x) {
-    x1 <- x[1]
-    x2 <- x[2]
-    x3 <- x[3]
-    x4 <- x[4]
-    x5 <- x[5]
-    (2*(x1-0.5) + x2 + 2*x3 - x4 - x5)
+  
+  
+  
+  if(substr(abbv_scn, 3,3)=="n"){
+    # nonlinear function
+    psi_y <- function(x) {
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      1*(2*(x1-0.5)^2 + x2 + 2*x3 - x4 - x5)
+    }
+  } else if(substr(abbv_scn, 3,3)=="l"){
+    # linear function
+    psi_y <- function(x) {
+      x1 <- x[1]
+      x2 <- x[2]
+      x3 <- x[3]
+      x4 <- x[4]
+      x5 <- x[5]
+      (2*(x1-0.5) + x2 + 2*x3 - x4 - x5)
+    }
   }
-}
-
-
-
-
-
-
-
-
-
-set.seed(2018)
-
-
-########################
-## Load Procedures
-########################
-# source("./R/estimation-scripts-semipar-pseudomse-v2.R")
-source("./R/simulation-helpers.R")
-source("./R/mediation-funs-postsel.R")
-
-########################
-## SuperLearners
-########################
-
-# create_gam = create.Learner("SL.gam",
-#                             tune=list(
-#                               deg.gam=2
-#                             ))
-create_mgcv <- create.Learner("SL.mgcv", tune=list(
-  m=2,
-  k=c(2,3,5),
-  bs=c("ts")
-))
-
-cont_lib = c(
-  "SL.glm",
-  "SL.glmnet",
-  # "SL.ridge",
-  # "SL.xgboost",
-  # "SL.bartMachine",
-  # "SL.step.interaction",
-  # "SL.ksvm",
-  "SL.earth",
-  "SL.randomForest",
-  create_mgcv$names,
-  "SL.mean"
-)
-
-bin_lib = c(
-  "SL.glm",
-  "SL.glmnet",
-  # "SL.xgboost",
-  # "SL.bartMachine",
-  # "SL.step.interaction",
-  # "SL.ksvm",
-  "SL.earth",
-  "SL.randomForest",
-  create_mgcv$names,
-  "SL.mean"
-)
-
-########################
-## Simulations
-########################
-
-# Setup a lambda grid
-lambda.len = 301
-lambdas = n^(-0.75)*(2^seq(from=-2, to=10, length.out=lambda.len))
-
-set.seed(841664)
-folds <- caret::createFolds(y=1:n, k=V)
-set.seed(841665)
-split_folds <- caret::createFolds(y=1:n, k=splits)
-
-cl <- parallel::makeCluster(cores, "FORK", outfile=logfile)
-doParallel::registerDoParallel(cl)
-parallel::clusterSetRNGStream(cl, 2018)
-
-
-tryCatch({
+  
+  
+  ######################## SuperLearners ########################
+  
+  # create_gam = create.Learner("SL.gam",
+  #                             tune=list(
+  #                               deg.gam=2
+  #                             ))
+  create_mgcv <- create.Learner("SL.mgcv", tune=list(
+    m=2,
+    k=c(2,3,5),
+    bs=c("ts")
+  ))
+  
+  cont_lib = c(
+    "SL.glm",
+    "SL.glmnet",
+    # "SL.ridge",
+    # "SL.xgboost",
+    # "SL.bartMachine",
+    # "SL.step.interaction",
+    # "SL.ksvm",
+    "SL.earth",
+    "SL.randomForest",
+    create_mgcv$names,
+    "SL.mean"
+  )
+  
+  bin_lib = c(
+    "SL.glm",
+    "SL.glmnet",
+    # "SL.xgboost",
+    # "SL.bartMachine",
+    # "SL.step.interaction",
+    # "SL.ksvm",
+    "SL.earth",
+    "SL.randomForest",
+    create_mgcv$names,
+    "SL.mean"
+  )
+  
+  ######################## Simulations ########################
+  
+  if(cores > 1){
+    cl <- parallel::makeCluster(cores, "FORK", outfile=logfile)
+    doParallel::registerDoParallel(cl)
+    parallel::clusterSetRNGStream(cl, 2018)
+  } else {
+    foreach::registerDoSEQ()
+  }
+  
+  
+  
+  # tryCatch({
   simulations <- foreach(sim.idx=1:num_simulations) %dopar% {
     
-    ########################
-    ## Simulation mechanism
-    ########################
+    #### Simulation mechanism ####
     
     # set seed to ensure similar xdm each time -- allows for saving sl
     set.seed(65411 + sim.idx)
@@ -330,9 +293,11 @@ tryCatch({
     confounding_m <- apply(x, 1, function(row){
       psi_m(row)
     })
-    
+    # browser()
     # mediators
-    m <- (as.matrix(d) %*% alphas) + confounding_m + epsilon_m
+    m <- foreach(i=1:n, .combine=rbind) %do%{
+      d[i] * alphas + confounding_m[i] + epsilon_m[i,]
+    }
     # m[,p] <- m[,-p] %>% rowMeans
     # m[,p] <- m[,1]^2 + m[,2]^2 + rowMeans(m[,4:(p-1)])
     # m <- m + epsilon_m
@@ -344,11 +309,18 @@ tryCatch({
     
     set.seed(7243957 + sim.idx)
     # outcome equation
-    y <- (NDE * d) + (m %*% betas) + (confounding_y) + rnorm(n, mean=0, sd=2)
+    epsilon_y <- rnorm(n, mean=0, sd=1)
+    y <- (NDE * d) + (m %*% betas) + (confounding_y) + epsilon_y
     
     # for troubleshooting only
-    true_em <- (as.matrix(d.prob) %*% alphas) + confounding_m
+    true_em <- foreach(i=1:n, .combine=rbind) %do%{
+      (d.prob[i] * alphas) + confounding_m[i]
+    }
     true_ey <- as.numeric(NDE*d.prob + true_em %*% as.matrix(betas) + confounding_y)
+    
+    stopifnot(max(abs(
+      true_ey - confounding_y - NDE*d.prob - true_em %*% betas
+    )) < 1e-10)
     
     # if(sim.idx %% 10 == 0)
     #   print(paste("Completed simulation", sim.idx))
@@ -357,144 +329,137 @@ tryCatch({
     # em = replicate(p,confounding_m) + replicate(p,propensity)*alphas
     # ey = NDE*propensity + (em %*% betas) + confounding_y
     
+    # return(
+    tibble(
+      x=x, d=d, m=m, y=y,
+      propensity=d.prob,
+      true_em = true_em,
+      true_ey = true_ey,
+      psi_mx = confounding_m,
+      psi_yx = confounding_y,
+      epsilon = epsilon_y,
+      epsilon_m = epsilon_m
+    )
+    # )
+  }
+  # return(simulations)
+  print("Created data.")
+  # parallel::clusterExport(cl, "simulations")
+  
+  
+  #### Estimate mu (if necessary) ####
+  if(use_sl){
+    mu.hats <- estimate_nuisance()
+    print("Estimated mu-hats with SuperLearner.")
+  } else {
+    print("Robinsonizing with True Mu functions.")
+  }
+  
+  
+  opt <- tibble(
+    # n = n, # already calculated
+    num_simulations = num_simulations,
+    scenario = abbv_scn,
+    coef_setting = coef_setting,
+    use_sl = use_sl,
+    suffix = suffix_arg,
+    cores = cores
+  )
+  # browser() #TODO: Remove
+  #### Use the methods ####
+  results <- foreach(sim.idx=1:num_simulations, sim=simulations,
+                     .combine=rbind
+  ) %dopar% {
+    
+    if(use_sl){
+      mus <- mu.hats[[sim.idx]]
+      dc <- sim$d - mus$mu.dx
+      m_0 <- sim$m - mus$mu.mxis
+      y_0 <- sim$y - mus$mu.yx
+      
+    } else {
+      dc <- sim$d - sim$propensity
+      m_0 <- sim$m - sim$true_em
+      y_0 <- sim$y - sim$true_ey
+    }
+    
+    print("Beginning prd")
+    prd_results <- cv_sl_estimates_w_sel(
+      y_0, m_0, dc, weight.version="product", weight.gam=weight_gam,
+      lambdas=lambdas, folds=folds, opt=opt, 
+      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+    ) %>% mutate(sim=sim.idx)
+    
+    print("Beginning mix")
+    mix_results <- cv_sl_estimates_w_sel(
+      y_0, m_0, dc, weight.version="mixture", weight.gam=weight_gam,
+      lambdas=lambdas, folds=folds, opt=opt,
+      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+    ) %>% mutate(sim=sim.idx)
+    
+    print("Beginning adp")
+    adp_results <- cv_sl_estimates_w_sel(
+      y_0, m_0, dc, weight.version="adaptive", weight.gam=weight_gam,
+      lambdas=lambdas, folds=folds, opt=opt, 
+      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+    ) %>% mutate(sim=sim.idx)
+    
+    print("Beginning full")
+    full_results <- cv_sl_estimates_no_sel(
+      y_0, m_0, dc, model_name="full", opt=opt, 
+      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+    ) %>% mutate(sim=sim.idx)
+    
+    print("Beginning oracle")
+    oracle_results <- cv_sl_estimates_no_sel(
+      y_0, m_0[,true_M], dc, model_name="oracle", opt=opt, 
+      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+    ) %>% mutate(sim=sim.idx)
+    
     return(
-      tibble(
-        data.frame(
-          x=x, d=d, m=m, y=y,
-          propensity=d.prob
-        ),
-        confounding_m = true_em,
-        confounding_y = true_ey
+      rbind(
+        prd_results, mix_results, adp_results,
+        full_results, oracle_results
+      ) %>% mutate(
+        coverage_NDE = between(NDE, lower_NDE, upper_NDE),
+        coverage_NIE = between(NIE, lower_NIE, upper_NIE)
+        # coverage=if_else(
+        #   target == "NDE",
+        #   lower <= NDE & NDE <= upper,
+        #   lower <= NIE & NIE <= upper
+        # )
       )
     )
   }
   
-  print("Created data.")
-  parallel::clusterExport(cl, "simulations")
+  # 
+  # #### DEBUG ####
+  # bias1 <- foreach(sim=simulations, .combine=c) %dopar% {
+  #   
+  #   dc <- sim$d - sim$propensity
+  #   m_0 <- sim$m - sim$true_em
+  #   y_0 <- sim$y - sim$true_ey
+  #   
+  #   coef(lm(y_0 ~ dc + m_0 - 1))[1] - NDE
+  # }
+  # bias1 <- mean(bias1) #/ sd(bias1)
+  # 
+  # bias2 <- foreach(sim=simulations, .combine=c) %do% {
+  #   
+  #   Y <- sim$y
+  #   D <- sim$d
+  #   M <- sim$m
+  #   psi_y_x <- sim$psi_yx
+  #   coef(lm(Y ~ D + M + (psi_y_x)))[2] - (NDE)
+  #   
+  # }
+  # bias2 <- mean(bias2) #/sd(bias2)
   
-  # source("./R/simulation-helpers.R")
-  source("./R/estimate-nuisance.R")
+  print("Scenario Complete!")
+  stop = Sys.time()
+  print(stop - start)
   
   
-  print("Estimated mu-hats with SuperLearner.")
-  parallel::clusterExport(cl, "mu.hats")
+  return(results)
   
-  inference_switch <- function(idx, ..., split.folds, boot.sl) {
-    if(idx == 1){
-      cv_sl_estimates_w_boot(...)
-    } else if(idx==2) {
-      cv_sl_estimates_w_mult(..., split.folds=split.folds, boot.sl=boot.sl)
-    } else {
-      stop("Error: Invalid inference procedure!")
-    }
-  }
-  parallel::clusterExport(cl, "inference_switch")
-  
-  inference.results <- foreach(fun.idx=1:2) %do% {
-    mix.results <- foreach(sim=simulations, mus=mu.hats) %dopar% {
-      inference_switch(fun.idx, sim, mu.hats=mus,
-                       weight.version="mixture", weight.gam=weight_gam,
-                       lambdas=lambdas, folds=folds,
-                       candidate.mediators=candidate.mediators,
-                       x.cols=x.cols,
-                       treat.col="d", outcome.col="y",
-                       num_bootstraps=num_bootstraps,
-                       boot.seed=2349871,
-                       split.folds=split_folds,
-                       boot.sl=FALSE)
-    }
-    print("Finished lasso simulations: mixture.")
-    
-    prd.results <- foreach(sim=simulations, mus=mu.hats) %dopar% {
-      inference_switch(fun.idx, sim, mu.hats=mus,
-                       weight.version="product", weight.gam=weight_gam,
-                       lambdas=lambdas, folds=folds,
-                       candidate.mediators=candidate.mediators,
-                       x.cols=x.cols,
-                       treat.col="d", outcome.col="y",
-                       num_bootstraps=num_bootstraps,
-                       boot.seed=2349871,
-                       split.folds=split_folds,
-                       boot.sl=FALSE)
-    }
-    print("Finished lasso simulations: product.")
-    
-    adp.results <- foreach(sim=simulations, mus=mu.hats) %dopar% {
-      inference_switch(fun.idx, sim, mu.hats=mus,
-                       weight.version="adaptive", weight.gam=weight_gam,
-                       lambdas=lambdas, folds=folds,
-                       candidate.mediators=candidate.mediators,
-                       x.cols=x.cols,
-                       treat.col="d", outcome.col="y",
-                       num_bootstraps=num_bootstraps,
-                       boot.seed=2349871,
-                       split.folds=split_folds,
-                       boot.sl=FALSE)
-    }
-    print("Finished lasso simulations: adaptive.")
-    
-    print(paste0("Finished inference technique: ", fun.idx))
-    
-    list(mix.results=mix.results, prd.results=prd.results, adp.results=adp.results)
-  }
-  
-  oracle.results <- foreach(sim=simulations, mus=mu.hats) %dopar% {
-    cv_sl_estimates_no_sel(sim, mu.hats=mus,
-                           candidate.mediators=oracle.mediators,
-                           x.cols=x.cols,
-                           treat.col="d", outcome.col="y",
-                           num_bootstraps=num_bootstraps,
-                           boot.seed=2349871)
-  }
-  print("Finished oracle results.")
-  
-  full.results <- foreach(sim=simulations, mus=mu.hats) %dopar% {
-    cv_sl_estimates_no_sel(sim, mu.hats=mus,
-                           candidate.mediators=candidate.mediators,
-                           x.cols=x.cols,
-                           treat.col="d", outcome.col="y",
-                           num_bootstraps=num_bootstraps,
-                           boot.seed=2349871)
-  }
-  print("Finished full results.")
-  
-},finally={
-  # stopCluster(cl)
-  save.image(file=savefile)
-})
-
-
-print("Scenario Complete!")
-stop = Sys.time()
-print(stop - start)
-
-
-
-#######################
-## Print Results
-#######################
-prd.df <- result_dataframe(inference.results[[1]]$prd.results)
-prd.df %>% summary
-mean(prd.df$num_missed > 0)
-prd.df <- result_dataframe(inference.results[[2]]$prd.results)
-prd.df %>% summary
-mean(prd.df$num_missed > 0)
-
-mix.df <- result_dataframe(inference.results[[1]]$mix.results)
-mix.df %>% summary
-mean(mix.df$num_missed > 0)
-mix.df <- result_dataframe(inference.results[[2]]$mix.results)
-mix.df %>% summary
-mean(mix.df$num_missed > 0)
-
-
-adp.df <- result_dataframe(inference.results[[1]]$adp.results)
-adp.df %>% summary
-mean(adp.df$num_missed > 0)
-adp.df <- result_dataframe(inference.results[[2]]$adp.results)
-adp.df %>% summary
-mean(adp.df$num_missed > 0)
-
-# mix.df <- result_dataframe(mix.results)
-# prd.df <- result_dataframe(prd.results)
-# adp.df <- result_dataframe(adp.results)
+}

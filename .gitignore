@@ -41,3 +41,7 @@ vignettes/*.pdf
 
 # nohup output
 nohup.out
+
+# debugging-stuff
+R/*debug.R
+*debug.sh
