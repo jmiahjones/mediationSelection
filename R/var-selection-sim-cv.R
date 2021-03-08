@@ -108,16 +108,13 @@ main <- function(
                             coef_setting,
                             suffix_arg, sep="-")
   
-  logfile <- paste0("./logs/", savefile_suffix, "-var-selection.stdout")
-  savefile <- paste0("./cache/", savefile_suffix, "-var-selection.RData")
-  slfile_y <- paste0("./cache/sl/", slfile_y_suffix, "-train-y.RData")
-  slfile_md <- paste0("./cache/sl/", slfile_md_suffix, "-train-md.RData")
+  logfile <- paste0("./logs/cluster-", savefile_suffix, ".out")
+  # savefile <- paste0("./cache/", savefile_suffix, "-var-selection.RData")
+  # slfile_y <- paste0("./cache/sl/", slfile_y_suffix, "-train-y.RData")
+  # slfile_md <- paste0("./cache/sl/", slfile_md_suffix, "-train-md.RData")
   
   if(!dir.exists("./logs")){
     dir.create("./logs")
-  }
-  if(!dir.exists("./cache")){
-    dir.create("./cache")
   }
   if(file.exists(logfile)){
     file.remove(logfile)
