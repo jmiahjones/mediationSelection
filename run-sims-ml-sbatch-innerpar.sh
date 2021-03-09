@@ -3,7 +3,7 @@
 ns=(500 1000 2000 4000)
 usesl=T
 num_sims=1000
-suffix="boot-refactor"
+suffix="test"
 weightgam=cvgam
 # cores="default"
 
@@ -20,6 +20,7 @@ coefsize=${coefsizes[$coefidx]}
 n=${ns[$nidx]}
 echo "scenario=$scenario"
 echo "coefsize=$coefsize"
+echo "n=$n"
 
 
 # for scenario in lnn lll nnn; do

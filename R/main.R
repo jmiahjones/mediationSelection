@@ -7,13 +7,13 @@ if(length(args)==0){
   warning("No commandline arguments found. Debugging...")
   args <- c(
     100, # n
-    2, # num_simulations
-    "lnn", # abbv_scn
+    20, # num_simulations
+    "lll", # abbv_scn
     "large", # coef_setting
     "cv", # weight_gam
-    "F", # use_sl
+    "T", # use_sl
     "debug", # suffix_arg
-    1 # cores
+    2 # cores
   )
 }
 
@@ -55,7 +55,9 @@ save_file <- paste0("./results/result-",
 
 source("./R/var-selection-sim-cv.R")
 
-sl_loop <- if(use_sl) c(F,T) else F
+#TODO Remove
+# sl_loop <- use_sl
+sl_loop <- if(use_sl) c(T, F) else F
 main_result <- foreach(slB=sl_loop, .combine=rbind) %do%{
   main(
     n,

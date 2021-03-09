@@ -19,7 +19,6 @@ main <- function(
   # need this in the function environment
   source("./R/simulation-helpers.R")
   source("./R/mediation-funs-postsel.R")
-  source("./R/estimate-nuisance.R", local=T) 
   
   num_noise = 7
   
@@ -55,7 +54,7 @@ main <- function(
   rho2 = 0.0 # noise covariance
   corr_meds = c(1,9)
   p = length(alphas)
-  covariates_size = 5
+  covariates_size = 3
   V = 10 # number of folds for crossvalidation
   splits = ifelse(n<2000, 4L, 2L) # number of sample splits for cross-fitting
   
@@ -85,7 +84,9 @@ main <- function(
   candidate.mediators = paste0("m.", 1:p)
   true_M <- which(alphas*betas != 0)
   oracle.mediators <- candidate.mediators[true_M]
-  x.cols = paste0("x.", 1:covariates_size)
+  m.cols="m"
+  # x.cols = paste0("x.", 1:covariates_size)
+  x.cols="x"
   expit <- plogis
   
   # Setup a lambda grid
@@ -94,19 +95,17 @@ main <- function(
   
   set.seed(841664)
   folds <- caret::createFolds(y=1:n, k=V)
-  set.seed(841665)
-  split_folds <- caret::createFolds(y=1:n, k=splits)
   
   ################# Files ########################
   
   savefile_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
                            weight_gam_str, use_sl, suffix_arg, sep="-")
   # print(savefile_suffix)
-  slfile_y_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
-                           suffix_arg, sep="-")
-  slfile_md_suffix <- paste(n, num_simulations, substr(abbv_scn, 1,2), 
-                            coef_setting,
-                            suffix_arg, sep="-")
+  # slfile_y_suffix <- paste(n, num_simulations, abbv_scn, coef_setting,
+  #                          suffix_arg, sep="-")
+  # slfile_md_suffix <- paste(n, num_simulations, substr(abbv_scn, 1,2), 
+  #                           coef_setting,
+  #                           suffix_arg, sep="-")
   
   logfile <- paste0("./logs/cluster-", savefile_suffix, ".out")
   # savefile <- paste0("./cache/", savefile_suffix, "-var-selection.RData")
@@ -144,7 +143,7 @@ main <- function(
       x3 <- x[3]
       x4 <- x[4]
       x5 <- x[5]
-      expit((0*x1 + 1*x2 + 0*x3 + 0*x4 + 0*x5+0*x1^2*x2+0*x1*x3 - 0)/1)
+      expit((1*x1 + 1*x2 )/1.25)
     }
   } else if(substr(abbv_scn, 1,1)=="r"){
     # linear function
@@ -162,7 +161,7 @@ main <- function(
       x3 <- x[3]
       x4 <- x[4]
       x5 <- x[5]
-      1*x1^2 + x2 # 0*x3 - 0*x4 - 0*x5 + 0*x2*(x1-0.5)^2
+      1*x1^2 + x2 - x3 # 0*x3 - 0*x4 - 0*x5 + 0*x2*(x1-0.5)^2
     }
   } else if(substr(abbv_scn, 2,2)=="l"){
     # linear function
@@ -172,7 +171,7 @@ main <- function(
       x3 <- x[3]
       x4 <- x[4]
       x5 <- x[5]
-      1*x1 + x2
+      1*x1 + x2 - x3
     }
   }
   
@@ -186,7 +185,7 @@ main <- function(
       x3 <- x[3]
       x4 <- x[4]
       x5 <- x[5]
-      1*(2*(x1-0.5)^2 + x2 + 2*x3 - x4 - x5)
+      1*(2*(x1-0.5)^2 + x2 + 2*x3)
     }
   } else if(substr(abbv_scn, 3,3)=="l"){
     # linear function
@@ -196,49 +195,10 @@ main <- function(
       x3 <- x[3]
       x4 <- x[4]
       x5 <- x[5]
-      (2*(x1-0.5) + x2 + 2*x3 - x4 - x5)
+      (2*(x1-0.5) + x2 + 2*x3)
     }
   }
   
-  
-  ######################## SuperLearners ########################
-  
-  # create_gam = create.Learner("SL.gam",
-  #                             tune=list(
-  #                               deg.gam=2
-  #                             ))
-  create_mgcv <- create.Learner("SL.mgcv", tune=list(
-    m=2,
-    k=c(2,3,5),
-    bs=c("ts")
-  ))
-  
-  cont_lib = c(
-    "SL.glm",
-    "SL.glmnet",
-    # "SL.ridge",
-    # "SL.xgboost",
-    # "SL.bartMachine",
-    # "SL.step.interaction",
-    # "SL.ksvm",
-    "SL.earth",
-    "SL.randomForest",
-    create_mgcv$names,
-    "SL.mean"
-  )
-  
-  bin_lib = c(
-    "SL.glm",
-    "SL.glmnet",
-    # "SL.xgboost",
-    # "SL.bartMachine",
-    # "SL.step.interaction",
-    # "SL.ksvm",
-    "SL.earth",
-    "SL.randomForest",
-    create_mgcv$names,
-    "SL.mean"
-  )
   
   ######################## Simulations ########################
   
@@ -346,7 +306,9 @@ main <- function(
   
   #### Estimate mu (if necessary) ####
   if(use_sl){
-    mu.hats <- estimate_nuisance()
+    source("./R/estimate-nuisance.R", local=T)
+    # returns mu.hats
+    # mu.hats <- estimate_nuisance()
     print("Estimated mu-hats with SuperLearner.")
   } else {
     print("Robinsonizing with True Mu functions.")
@@ -362,7 +324,7 @@ main <- function(
     suffix = suffix_arg,
     cores = cores
   )
-  # browser() #TODO: Remove
+  
   #### Use the methods ####
   results <- foreach(sim.idx=1:num_simulations, sim=simulations,
                      .combine=rbind
@@ -419,7 +381,9 @@ main <- function(
         full_results, oracle_results
       ) %>% mutate(
         coverage_NDE = between(NDE, lower_NDE, upper_NDE),
-        coverage_NIE = between(NIE, lower_NIE, upper_NIE)
+        coverage_NIE = between(NIE, lower_NIE, upper_NIE),
+        err_NDE = NDE - NDE_hat,
+        err_NIE = NIE - NIE_hat
         # coverage=if_else(
         #   target == "NDE",
         #   lower <= NDE & NDE <= upper,
@@ -429,28 +393,6 @@ main <- function(
     )
   }
   
-  # 
-  # #### DEBUG ####
-  # bias1 <- foreach(sim=simulations, .combine=c) %dopar% {
-  #   
-  #   dc <- sim$d - sim$propensity
-  #   m_0 <- sim$m - sim$true_em
-  #   y_0 <- sim$y - sim$true_ey
-  #   
-  #   coef(lm(y_0 ~ dc + m_0 - 1))[1] - NDE
-  # }
-  # bias1 <- mean(bias1) #/ sd(bias1)
-  # 
-  # bias2 <- foreach(sim=simulations, .combine=c) %do% {
-  #   
-  #   Y <- sim$y
-  #   D <- sim$d
-  #   M <- sim$m
-  #   psi_y_x <- sim$psi_yx
-  #   coef(lm(Y ~ D + M + (psi_y_x)))[2] - (NDE)
-  #   
-  # }
-  # bias2 <- mean(bias2) #/sd(bias2)
   
   print("Scenario Complete!")
   stop = Sys.time()

@@ -29,7 +29,7 @@ my_sl_predict <- function(obj, Y=NULL){
 }
 
 ##### SL-Training #####
-train_sl_mu <- function(sel_df, candidate.mediators, 
+train_sl_mu <- function(df, m.cols, 
                         x.cols, treat.col, outcome.col,
                         bin_lib, cont_lib, folds, cores=NULL, 
                         parallel_outfile=NULL,
@@ -41,23 +41,23 @@ train_sl_mu <- function(sel_df, candidate.mediators,
   .require(foreach)
   .require(quadprog)
   .require(SuperLearner)
-  # p = length(candidate.mediators)
+  
   V <- length(folds)
   SL.CV.control <- list(V=V, validRows=folds, shuffle=FALSE)
   
-  X <- sel_df %>% dplyr::select(all_of(x.cols))
+  X <- df %>% dplyr::pull(x.cols) %>% as.data.frame
   
   # tests for D
   if(estD){
-    D <- clean_D(sel_df, treat.col)
+    D <- clean_D(df, treat.col)
   }
   
   if(estM){
-    M <- dplyr::select(sel_df, all_of(candidate.mediators))
+    M <- df %>% dplyr::pull(m.cols)
   }
   
   if(estY){
-    Y <- sel_df %>% dplyr::pull(outcome.col)
+    Y <- df %>% dplyr::pull(outcome.col)
   }
   
   
@@ -100,6 +100,8 @@ train_sl_mu <- function(sel_df, candidate.mediators,
       .require(foreach)
       cl = makeCluster(cores, "FORK", outfile=parallel_outfile)
       registerDoParallel(cl)
+    } else {
+      registerDoSEQ()
     }
     
     mu.mxis = foreach(i=1:p, 
@@ -109,7 +111,7 @@ train_sl_mu <- function(sel_df, candidate.mediators,
       
       if(verbose)
         print(paste0(Sys.time(), ": Starting ", i, " of ", p))
-      Mi <- dplyr::pull(M, i)
+      Mi <- M[,i]
       
       mu.mxi <- try(
         CV.SuperLearner(Y=Mi, X=X, SL.library=cont_lib, family=gaussian(),
@@ -391,45 +393,3 @@ predict.my.SL.randomForest <- function(object, newdata, family, ...)
 #   return(out)
 # }
 
-
-# DEPRECATED #####
-
-true_sl_mu <- function(sel_df, candidate.mediators) {
-  
-  p = length(candidate.mediators)
-  
-  mu.dx = sel_df$propensity
-  
-  mu.mxis = lapply(1:p, function(i){
-    mu.mxi <- sel_df$confounding_m[,i]
-    return(mu.mxi)
-  })
-  
-  mu.yx = sel_df$confounding_y
-  
-  return(
-    list(mu.mxis=mu.mxis,
-         mu.dx=mu.dx,
-         mu.yx=mu.yx)
-  )
-  
-}
-
-result_dataframe <- function(results){
-  true_M_str <- paste0("m.", true_M)
-  foreach(this_res=results, .combine=rbind) %do% {
-    data.frame(
-      coverage_NDE = 1*((this_res$boot_ci[1,1] <= NDE) & (NDE <= this_res$boot_ci[2,1])),
-      NDE_len = this_res$boot_ci[2,1] - this_res$boot_ci[1,1],
-      coverage_NIE = 1*((this_res$boot_ci[1,2] <= NIE) & (NIE <= this_res$boot_ci[2,2])),
-      NIE_len = this_res$boot_ci[2,2] - this_res$boot_ci[1,2],
-      NIE_err = this_res$NIE_hat - NIE,
-      NDE_err = this_res$NDE_hat - NDE,
-      num_noise = length(setdiff(this_res$sel_M, true_M_str)),
-      num_missed = length(setdiff(true_M_str, this_res$sel_M)),
-      # which_correct = sapply(true_M, function(x) x %in% this_res$sel_M),
-      picked_lam = this_res$lambda
-    ) %>% 
-      mutate(is_missed = 1*(num_missed > 0))
-  }
-}
