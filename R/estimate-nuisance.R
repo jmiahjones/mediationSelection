@@ -3,6 +3,7 @@ library(nnls)
 library(quadprog)
 library(nloptr)
 
+splits = ifelse(n<2000, 4L, 2L) # number of sample splits for cross-fitting
 set.seed(841665)
 split_folds <- caret::createFolds(y=1:n, k=splits)
 
@@ -23,11 +24,11 @@ split_folds <- caret::createFolds(y=1:n, k=splits)
   
   cont_lib = c(
     "SL.lm",
-    # "SL.glmnet",
-    # "SL.earth",
-    # "SL.randomForest",
-    # create_mgcv$names,
-    "SL.mean"
+    "SL.glmnet",
+    "SL.earth",
+    "SL.randomForest",
+    create_mgcv$names
+    # "SL.mean"
     # "SL.ridge",
     # "SL.xgboost",
     # "SL.bartMachine",
@@ -37,11 +38,11 @@ split_folds <- caret::createFolds(y=1:n, k=splits)
   
   bin_lib = c(
     "SL.glm",
-    # "SL.glmnet",
-    # "SL.earth",
-    # "SL.randomForest",
-    # create_mgcv$names,
-    "SL.mean"
+    "SL.glmnet",
+    "SL.earth",
+    "SL.randomForest",
+    create_mgcv$names
+    # "SL.mean"
     # "SL.xgboost",
     # "SL.bartMachine",
     # "SL.step.interaction",

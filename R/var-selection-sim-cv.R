@@ -56,7 +56,6 @@ main <- function(
   p = length(alphas)
   covariates_size = 3
   V = 10 # number of folds for crossvalidation
-  splits = ifelse(n<2000, 4L, 2L) # number of sample splits for cross-fitting
   
   
   

@@ -12,5 +12,4 @@ date
 
 module load r/3.6.3/b1
 
-cores=12
-./run-sims-ml-sbatch-innerpar.sh
+cores=12 ./run-sims-ml-sbatch-innerpar.sh

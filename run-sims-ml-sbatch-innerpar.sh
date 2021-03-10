@@ -3,7 +3,7 @@
 ns=(500 1000 2000 4000)
 usesl=T
 num_sims=1000
-suffix="test"
+suffix="ml0-9-0"
 weightgam=cvgam
 # cores="default"
 
@@ -21,6 +21,7 @@ n=${ns[$nidx]}
 echo "scenario=$scenario"
 echo "coefsize=$coefsize"
 echo "n=$n"
+echo "cores=$cores"
 
 
 # for scenario in lnn lll nnn; do

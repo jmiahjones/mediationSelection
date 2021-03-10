@@ -54,9 +54,8 @@ save_file <- paste0("./results/result-",
                     )
 
 source("./R/var-selection-sim-cv.R")
+print(paste0("Cores: ", cores))
 
-#TODO Remove
-# sl_loop <- use_sl
 sl_loop <- if(use_sl) c(T, F) else F
 main_result <- foreach(slB=sl_loop, .combine=rbind) %do%{
   main(
