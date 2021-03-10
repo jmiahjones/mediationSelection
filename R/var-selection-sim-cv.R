@@ -17,8 +17,8 @@ main <- function(
   
   ######################## Load Procedures ########################
   # need this in the function environment
-  source("./R/simulation-helpers.R")
-  source("./R/mediation-funs-postsel.R")
+  source("./R/simulation-helpers.R", local=T)
+  source("./R/mediation-funs-postsel.R", local=T)
   
   num_noise = 7
   
