@@ -80,7 +80,6 @@ robinsonize_system <- function(D, M, Y, mu.hats){
   require(..., quietly=TRUE)
 
 ######## With Selection #####################
-# TODO finish re-factoring to make everything modular
 cv_sl_estimates_w_sel <- function(y_0, m_0, dc,
                                   weight.version, weight.gam=1,
                                   lambdas, folds,
@@ -166,6 +165,10 @@ cv_sl_estimates_w_sel <- function(y_0, m_0, dc,
   beta_hats <- adapt.fit.coef[-(1:2),][selected_idx]
   NIE_hat <- sum(alpha_hats * beta_hats)
   
+  # TODO: Remove hard-coded true m set
+  num_missed <- length(setdiff(1:3, selected_idx))
+  num_noise <- length(setdiff(selected_idx, 1:3))
+  
   sel_size <- length(selected_idx)
   return_tbl <- tibble(
     n=n,
@@ -181,7 +184,9 @@ cv_sl_estimates_w_sel <- function(y_0, m_0, dc,
     sel_info=list(tibble(
       alpha_hats=alpha_hats, beta_hats=beta_hats,
       sel_M = selected_idx
-    ))
+    )),
+    num_missed = num_missed,
+    num_noise = num_noise
   )
   
   if(do.boot){
@@ -226,7 +231,7 @@ cv_sl_estimates_w_sel <- function(y_0, m_0, dc,
       # selection inf methods
       tibble(
         target=c("NDE","NIE"),
-        inf_method="minner",
+        inf_method="minnier",
         lower=minnier_boot_ci[,1],
         upper=minnier_boot_ci[,2],
       ),
@@ -266,7 +271,6 @@ cv_sl_estimates_w_sel <- function(y_0, m_0, dc,
 
 
 ########## No Selection ####################
-#TODO remove references to candidate.mediators, copy the boot logic/returns below
 cv_sl_estimates_no_sel <- function(y_0, m_0, dc,
                                    model_name,
                                    opt=NULL,
@@ -305,6 +309,9 @@ cv_sl_estimates_no_sel <- function(y_0, m_0, dc,
   beta_hats = coef(yfit)[-1]
   NIE_hat <- sum(alpha_hats * beta_hats)
   
+  # TODO: Remove hard-coded true m set
+  num_missed <- length(setdiff(1:3, selected_idx))
+  num_noise <- length(setdiff(selected_idx, 1:3))
   
   return_tbl <- tibble(
     n=n,
@@ -320,7 +327,9 @@ cv_sl_estimates_no_sel <- function(y_0, m_0, dc,
     sel_info=list(tibble(
       alpha_hats=alpha_hats, beta_hats=beta_hats,
       sel_M = NA
-    ))
+    )),
+    num_missed = num_missed,
+    num_noise = num_noise
   )
   
   if(do.boot){
@@ -546,8 +555,7 @@ naive_boot_fun <- function(y_0, m_0, dc,
 }
 
 
-naive_delta_inf <- function(dc, m_0, y_0, sel_M_idxs, ret_est=F){
-  
+naive_delta_inf <- function(y_0, m_0, dc, sel_M_idxs, ret_est=F){
   p_sel <- length(sel_M_idxs)
   m_sel <- as.matrix(m_0[,sel_M_idxs])
   even_idx_sel <- 2*(1:p_sel)

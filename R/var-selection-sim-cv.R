@@ -335,42 +335,57 @@ main <- function(
       m_0 <- sim$m - mus$mu.mxis
       y_0 <- sim$y - mus$mu.yx
       
+      mu_err <- cbind(
+        muderr=(mus$mu.dx-sim$propensity)^2,
+        mumerr=(mus$mu.mxis-sim$true_em)^2,
+        muyerr=(mus$mu.yx-sim$true_ey)^2
+      ) %>% colMeans
+      
     } else {
       dc <- sim$d - sim$propensity
       m_0 <- sim$m - sim$true_em
       y_0 <- sim$y - sim$true_ey
+      
+      mu_err <- c(
+        muderr=0,
+        mumerr=rep(0, ncol(sim$m)),
+        muyerr=0
+      )
     }
+    
+    names(mu_err)[-c(1, length(mu_err))] <- paste0("mumerr", 1:p)
+    this_opt <- tibble(opt, mu_err %>% as.list %>% as_tibble)
     
     print("Beginning prd")
     prd_results <- cv_sl_estimates_w_sel(
       y_0, m_0, dc, weight.version="product", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=opt, 
+      lambdas=lambdas, folds=folds, opt=this_opt, 
       num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
     
     print("Beginning mix")
     mix_results <- cv_sl_estimates_w_sel(
       y_0, m_0, dc, weight.version="mixture", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=opt,
+      lambdas=lambdas, folds=folds, opt=this_opt,
       num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
     
     print("Beginning adp")
     adp_results <- cv_sl_estimates_w_sel(
       y_0, m_0, dc, weight.version="adaptive", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=opt, 
+      lambdas=lambdas, folds=folds, opt=this_opt, 
       num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
     
     print("Beginning full")
     full_results <- cv_sl_estimates_no_sel(
-      y_0, m_0, dc, model_name="full", opt=opt, 
+      y_0, m_0, dc, model_name="full", opt=this_opt, 
       num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
     
     print("Beginning oracle")
     oracle_results <- cv_sl_estimates_no_sel(
-      y_0, m_0[,true_M], dc, model_name="oracle", opt=opt, 
+      y_0, m_0[,true_M], dc, model_name="oracle", opt=this_opt, 
       num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
     
@@ -379,10 +394,10 @@ main <- function(
         prd_results, mix_results, adp_results,
         full_results, oracle_results
       ) %>% mutate(
-        coverage_NDE = between(NDE, lower_NDE, upper_NDE),
-        coverage_NIE = between(NIE, lower_NIE, upper_NIE),
-        err_NDE = NDE - NDE_hat,
-        err_NIE = NIE - NIE_hat
+        coverage_NDE = (lower_NDE <= NDE) & (NDE <= upper_NDE),
+        coverage_NIE = (lower_NIE <= NIE) & (NIE <= upper_NIE),
+        err_NDE = NDE_hat - NDE,
+        err_NIE = NIE_hat - NIE
         # coverage=if_else(
         #   target == "NDE",
         #   lower <= NDE & NDE <= upper,
