@@ -2,7 +2,7 @@ library(ggplot2)
 library(qs)
 library(dplyr)
 
-suffix <- "ml0-9-0.qs"
+suffix <- "ml0-9-1.qs"
 files <- dir("./results/", "*.qs", full.names = T)
 files <- files[grep(suffix, files)]
 
@@ -10,13 +10,13 @@ all_results <- lapply(files, qread, nthreads=2) %>% bind_rows
 all_results <- all_results %>% mutate(
   NIE = if_else(coef_setting == "small", 3*16*n^(-1/4), 2.4),
   NDE = 2,
-  coverage_NDE = (lower_NDE <= NDE) & (NDE <= upper_NDE),
-  coverage_NIE = (lower_NIE <= NIE) & (NIE <= upper_NIE),
-  scenario = toupper(scenario),
-  inf_method = if_else(inf_method == "minner", "minnier", inf_method) # fix typo
+  # coverage_NDE = (lower_NDE <= NDE) & (NDE <= upper_NDE),
+  # coverage_NIE = (lower_NIE <= NIE) & (NIE <= upper_NIE),
+  scenario = toupper(scenario)
+  # inf_method = if_else(inf_method == "minner", "minnier", inf_method) # fix typo
 )
 
-all_results <- qread("./results/all-results-ml0-9-0.qs", nthreads=2)
+# all_results <- qread("./results/all-results-ml0-9-0.qs", nthreads=2)
 
 # check_df <- all_results %>% 
 #   filter(model_version=="full") %>% 
