@@ -309,9 +309,9 @@ cv_sl_estimates_no_sel <- function(y_0, m_0, dc,
   beta_hats = coef(yfit)[-1]
   NIE_hat <- sum(alpha_hats * beta_hats)
   
-  # TODO: Remove hard-coded true m set
-  num_missed <- length(setdiff(1:3, selected_idx))
-  num_noise <- length(setdiff(selected_idx, 1:3))
+  # TODO: Remove hard-code
+  num_missed <- 0
+  num_noise <- p-3
   
   return_tbl <- tibble(
     n=n,
