@@ -7,7 +7,7 @@ if(length(args)==0){
   warning("No commandline arguments found. Debugging...")
   args <- c(
     100, # n
-    20, # num_simulations
+    2, # num_simulations
     "lll", # abbv_scn
     "large", # coef_setting
     "cv", # weight_gam

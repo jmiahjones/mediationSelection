@@ -22,26 +22,20 @@ main <- function(
   
   num_noise = 7
   
-  num_bootstraps=100L
+  num_bootstraps=1000L
   small.setting <- substr(coef_setting, 1,1)=="s"
   is.randomized <- substr(abbv_scn, 1,1)=="r"
   
   if(small.setting){
     # small
     # chose alphas*betas=16/sqrt(n) for the first 3 mediators
-    alphas = c(4, 4*n^(1/4), 4*n^(1/4), rep(0, num_noise)) # D-M coef
-    betas = c(4, 4*n^(-1/4), 4*n^(-1/4), rep(0,num_noise)) # M-Y coef
-    alphas = alphas/(n^(1/4))
-    betas = betas/(n^(1/4))
+    alphas = 4*c(4*n^(-1/4), 4, 4, rep(0, num_noise)) # D-M coef
+    betas = c(n^(-1/4), n^(-1/2), n^(-1/2), rep(0,num_noise)) # M-Y coef
   } else {
     # nonsmall
     # chose alphas*betas=.8 + O(1/n) for the first 3 mediators
-    alpha0 <- c(1, 2, 2, rep(0, num_noise))
-    beta0 <- c(.8, .4, .4, rep(0, num_noise))
-    # alpha.h = c(rep(1, 3), rep(1, num_noise)) # D-M coef
-    # beta.h = c(rep(1, 3), rep(0, num_noise)) # M-Y coef
-    alphas = alpha0 #+ alpha.h/(n^(1/2))
-    betas = beta0 #+ beta.h/(n^(1/2))
+    alphas <- c(1, 2, 2, rep(0, num_noise))
+    betas <- c(.8, .4, .4, rep(0, num_noise))
   }
   
   
