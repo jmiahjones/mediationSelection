@@ -10,10 +10,85 @@ main <- function(
   weight_gam,
   use_sl,
   suffix_arg,
-  cores
+  cores,
+  oracle_only=F
 ) {
   
   assertthat::assert_that(is.logical(use_sl))
+  
+  psi_estimates_no_sel <- function(y, m, d, psiy, psim,
+                                   model_name,
+                                   opt=NULL,
+                                   ...) {
+    
+    .require(dplyr)
+    .require(tibble)
+    .require(foreach)
+    
+    assertthat::assert_that(
+      is.matrix(m),
+      is.matrix(psim) || is.vector(psim)
+    )
+    n <- nrow(m)
+    p <- ncol(m)
+    
+    assertthat::assert_that(
+      n == length(d), 
+      n == length(y),
+      p>1,
+      is.numeric(d) || (is.matrix(d) && ncol(d) == 1),
+      is.numeric(y) || (is.matrix(y) && ncol(y) == 1),
+      n == length(psiy)
+    )
+    
+    if(is.matrix(psim) && ncol(psim) == p){
+      m_0 <- m - psim
+    } else {
+      m_0 <- foreach::foreach(j=1:p, .combine=cbind) %do%{
+        m[,j] - psim
+      }
+    }
+    mfit <- lm(m_0 ~ d - 1)
+    if(p>1){
+      alpha_hats = coef(mfit)[1, ]
+    } else {
+      alpha_hats = coef(mfit)[1]
+    }
+    
+    y_0 <- y - psiy
+    yfit = lm(y_0 ~ d + m - 1)
+    gamma_hat <- coef(yfit)[1]
+    beta_hats = coef(yfit)[-1]
+    NIE_hat <- sum(alpha_hats * beta_hats)
+    
+    # TODO: Remove hard-code
+    num_missed <- 0
+    num_noise <- p-3
+    
+    return_tbl <- tibble(
+      n=n,
+      p=p,
+      opt,
+      model_version = model_name,
+      lambda = NA,
+      NIE_hat = NIE_hat, 
+      NDE_hat = gamma_hat,
+      ATE_hat = NIE_hat + gamma_hat,
+      sel_size = NA,
+      kap=NA,
+      sel_info=list(tibble(
+        alpha_hats=alpha_hats, beta_hats=beta_hats,
+        sel_M = NA
+      )),
+      num_missed = num_missed,
+      num_noise = num_noise
+    )
+    
+    return(
+      return_tbl
+    )
+    
+  }
   
   ######################## Load Procedures ########################
   # need this in the function environment
@@ -266,7 +341,7 @@ main <- function(
     true_em <- foreach(i=1:n, .combine=rbind) %do%{
       (d.prob[i] * alphas) + confounding_m[i]
     }
-    true_ey <- as.numeric(NDE*d.prob + true_em %*% as.matrix(betas) + confounding_y)
+    true_ey <- as.numeric(NDE*d.prob + true_em %*% matrix(betas, ncol=1) + confounding_y)
     
     stopifnot(max(abs(
       true_ey - confounding_y - NDE*d.prob - true_em %*% betas
@@ -350,46 +425,62 @@ main <- function(
     names(mu_err)[-c(1, length(mu_err))] <- paste0("mumerr", 1:p)
     this_opt <- tibble(opt, mu_err %>% as.list %>% as_tibble)
     
-    print("Beginning prd")
-    prd_results <- cv_sl_estimates_w_sel(
-      y_0, m_0, dc, weight.version="product", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=this_opt, 
-      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
-    ) %>% mutate(sim=sim.idx)
-    
-    print("Beginning mix")
-    mix_results <- cv_sl_estimates_w_sel(
-      y_0, m_0, dc, weight.version="mixture", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=this_opt,
-      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
-    ) %>% mutate(sim=sim.idx)
-    
-    print("Beginning adp")
-    adp_results <- cv_sl_estimates_w_sel(
-      y_0, m_0, dc, weight.version="adaptive", weight.gam=weight_gam,
-      lambdas=lambdas, folds=folds, opt=this_opt, 
-      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
-    ) %>% mutate(sim=sim.idx)
-    
-    print("Beginning full")
-    full_results <- cv_sl_estimates_no_sel(
-      y_0, m_0, dc, model_name="full", opt=this_opt, 
-      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
-    ) %>% mutate(sim=sim.idx)
-    
+    if(oracle_only){
+      prd_results <- mix_results <- adp_results <- NULL
+      
+      full_results <- psi_estimates_no_sel(
+        y=sim$y, m=sim$m, d=sim$d, 
+        psiy=sim$psi_yx, psim=sim$psi_mx,
+        model_name="oracle-psi", opt=this_opt
+      ) %>% mutate(sim=sim.idx)
+      
+      
+      print(sprintf("J1 estimate of NDE: %.3f",
+                    sqrt(n)*solve(crossprod(cbind(dc, m_0)))[1,1]))
+      
+    } else {
+      print("Beginning prd")
+      prd_results <- cv_sl_estimates_w_sel(
+        y_0, m_0, dc, weight.version="product", weight.gam=weight_gam,
+        lambdas=lambdas, folds=folds, opt=this_opt, 
+        num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+      ) %>% mutate(sim=sim.idx)
+      
+      print("Beginning mix")
+      mix_results <- cv_sl_estimates_w_sel(
+        y_0, m_0, dc, weight.version="mixture", weight.gam=weight_gam,
+        lambdas=lambdas, folds=folds, opt=this_opt,
+        num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+      ) %>% mutate(sim=sim.idx)
+      
+      print("Beginning adp")
+      adp_results <- cv_sl_estimates_w_sel(
+        y_0, m_0, dc, weight.version="adaptive", weight.gam=weight_gam,
+        lambdas=lambdas, folds=folds, opt=this_opt, 
+        num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+      ) %>% mutate(sim=sim.idx)
+      
+      print("Beginning full")
+      full_results <- cv_sl_estimates_no_sel(
+        y_0, m_0, dc, model_name="full", opt=this_opt, 
+        num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+      ) %>% mutate(sim=sim.idx)
+      
+    }
     print("Beginning oracle")
     oracle_results <- cv_sl_estimates_no_sel(
       y_0, m_0[,true_M], dc, model_name="oracle", opt=this_opt, 
-      num_bootstraps=num_bootstraps, do.boot=TRUE, boot.seed=2349871
+      num_bootstraps=num_bootstraps, do.boot=FALSE, boot.seed=2349871
     ) %>% mutate(sim=sim.idx)
+    
     
     return(
       rbind(
         prd_results, mix_results, adp_results,
         full_results, oracle_results
       ) %>% mutate(
-        coverage_NDE = (lower_NDE <= NDE) & (NDE <= upper_NDE),
-        coverage_NIE = (lower_NIE <= NIE) & (NIE <= upper_NIE),
+        # coverage_NDE = (lower_NDE <= NDE) & (NDE <= upper_NDE),
+        # coverage_NIE = (lower_NIE <= NIE) & (NIE <= upper_NIE),
         err_NDE = NDE_hat - NDE,
         err_NIE = NIE_hat - NIE
         # coverage=if_else(

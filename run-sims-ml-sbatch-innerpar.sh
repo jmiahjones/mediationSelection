@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ns=(500 1000 2000 4000)
-usesl=T
-num_sims=1000
-suffix="ml0-9-2"
+usesl=F
+num_sims=10000
+suffix="check-rootn-bias"
 weightgam=cvgam
 # cores="default"
 

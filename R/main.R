@@ -6,12 +6,12 @@ args = commandArgs(trailingOnly=TRUE)
 if(length(args)==0){
   warning("No commandline arguments found. Debugging...")
   args <- c(
-    100, # n
-    2, # num_simulations
+    1000, # n
+    10, # num_simulations
     "lll", # abbv_scn
     "large", # coef_setting
     "cv", # weight_gam
-    "T", # use_sl
+    "F", # use_sl
     "debug", # suffix_arg
     2 # cores
   )
@@ -66,7 +66,8 @@ main_result <- foreach(slB=sl_loop, .combine=rbind) %do%{
     weight_gam,
     slB,
     suffix_arg,
-    cores
+    cores,
+    oracle_only=T
   )
 }
 
