@@ -50,7 +50,7 @@ plot_bias <- function(bias_df, coefsize, geom, model_colors,
     filter(coef_setting == lower_coefsize)
   
   if(normalize){
-    plot_df <- plot_df %>% mutate_at(vars(starts_with("bias_")), ~sqrt(n)*.)
+    plot_df <- plot_df %>% mutate(bias=sqrt(n)*bias)
   }
   
   the_geom <- if(geom == "point"){

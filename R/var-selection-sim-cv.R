@@ -16,80 +16,6 @@ main <- function(
   
   assertthat::assert_that(is.logical(use_sl))
   
-  psi_estimates_no_sel <- function(y, m, d, psiy, psim,
-                                   model_name,
-                                   opt=NULL,
-                                   ...) {
-    
-    .require(dplyr)
-    .require(tibble)
-    .require(foreach)
-    
-    assertthat::assert_that(
-      is.matrix(m),
-      is.matrix(psim) || is.vector(psim)
-    )
-    n <- nrow(m)
-    p <- ncol(m)
-    
-    assertthat::assert_that(
-      n == length(d), 
-      n == length(y),
-      p>1,
-      is.numeric(d) || (is.matrix(d) && ncol(d) == 1),
-      is.numeric(y) || (is.matrix(y) && ncol(y) == 1),
-      n == length(psiy)
-    )
-    
-    if(is.matrix(psim) && ncol(psim) == p){
-      m_0 <- m - psim
-    } else {
-      m_0 <- foreach::foreach(j=1:p, .combine=cbind) %do%{
-        m[,j] - psim
-      }
-    }
-    mfit <- lm(m_0 ~ d - 1)
-    if(p>1){
-      alpha_hats = coef(mfit)[1, ]
-    } else {
-      alpha_hats = coef(mfit)[1]
-    }
-    
-    y_0 <- y - psiy
-    yfit = lm(y_0 ~ d + m - 1)
-    gamma_hat <- coef(yfit)[1]
-    beta_hats = coef(yfit)[-1]
-    NIE_hat <- sum(alpha_hats * beta_hats)
-    
-    # TODO: Remove hard-code
-    num_missed <- 0
-    num_noise <- p-3
-    
-    return_tbl <- tibble(
-      n=n,
-      p=p,
-      opt,
-      model_version = model_name,
-      lambda = NA,
-      NIE_hat = NIE_hat, 
-      NDE_hat = gamma_hat,
-      ATE_hat = NIE_hat + gamma_hat,
-      sel_size = NA,
-      kap=NA,
-      sel_info=list(tibble(
-        alpha_hats=alpha_hats, beta_hats=beta_hats,
-        sel_M = NA
-      )),
-      num_missed = num_missed,
-      num_noise = num_noise
-    )
-    
-    return(
-      return_tbl
-    )
-    
-  }
-  
   ######################## Load Procedures ########################
   # need this in the function environment
   source("./R/simulation-helpers.R", local=T)
@@ -428,10 +354,10 @@ main <- function(
     if(oracle_only){
       prd_results <- mix_results <- adp_results <- NULL
       
-      full_results <- psi_estimates_no_sel(
-        y=sim$y, m=sim$m, d=sim$d, 
-        psiy=sim$psi_yx, psim=sim$psi_mx,
-        model_name="oracle-psi", opt=this_opt
+      full_results <- lm_estimates_no_sel(
+        y=sim$y, m=sim$m[,true_M], d=sim$d, 
+        x=sim$x,
+        model_name="oracle-lm", opt=this_opt
       ) %>% mutate(sim=sim.idx)
       
       
@@ -492,7 +418,7 @@ main <- function(
     )
   }
   
-  
+  stopImplicitCluster()
   print("Scenario Complete!")
   stop = Sys.time()
   print(stop - start)
