@@ -3,7 +3,7 @@
 ns=(500 1000 2000 4000)
 usesl=T
 num_sims=1000
-suffix="ml0-9-2"
+suffix="ml0-10-0"
 weightgam=cvgam
 # cores="default"
 

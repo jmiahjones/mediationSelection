@@ -211,7 +211,7 @@ main <- function(
     #### Simulation mechanism ####
     
     # set seed to ensure similar xdm each time -- allows for saving sl
-    set.seed(65411 + sim.idx)
+    set.seed(2021 + sim.idx)
     # confounders
     # x <- replicate(covariates_size, runif(n, min=0, max=1))
     x <- replicate(covariates_size, rnorm(n, sd=0.5))
@@ -257,7 +257,7 @@ main <- function(
       psi_y(row)
     })
     
-    set.seed(7243957 + sim.idx)
+    # set.seed(7243957 + sim.idx)
     # outcome equation
     epsilon_y <- rnorm(n, mean=0, sd=1)
     y <- (NDE * d) + (m %*% betas) + (confounding_y) + epsilon_y
