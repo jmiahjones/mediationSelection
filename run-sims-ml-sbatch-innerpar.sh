@@ -3,7 +3,7 @@
 ns=(500 1000 2000 4000)
 usesl=F
 num_sims=1000
-suffix="check-misspec-bias"
+suffix="check-misspec-bias-0-10-0"
 weightgam=cvgam
 # cores="default"
 
