@@ -23,8 +23,9 @@ main <- function(
   num_noise = 7
   
   num_bootstraps=1000L
-  small.setting <- coef_setting=="small"
-  small.alpha.setting <- coef_setting=="smallalpha"
+  small.setting <- tolower(coef_setting)=="small"
+  small.alpha.setting <- tolower(coef_setting)=="smallalpha"
+  many.p.setting <- tolower(coef_setting)=="manyp"
   is.randomized <- substr(abbv_scn, 1,1)=="r"
   
   if(small.setting){
@@ -35,9 +36,13 @@ main <- function(
   } else if(small.alpha.setting) {
     alphas = n^(-1/2)*c(1, 1, n^(1/4), rep(0, num_noise)) # D-M coef
     betas = 16*c(1, 1, n^(-1/4), rep(0,num_noise)) # M-Y coef
+  } else if(many.p.setting) {
+    # large fixed coefficients
+    num_noise <- 57 # p=60
+    alphas <- c(1, 2, 2, rep(0, num_noise))
+    betas <- c(.8, .4, .4, rep(0, num_noise))
   } else {
-    # nonsmall
-    # chose alphas*betas=.8 + O(1/n) for the first 3 mediators
+    # large fixed coefficients
     alphas <- c(1, 2, 2, rep(0, num_noise))
     betas <- c(.8, .4, .4, rep(0, num_noise))
   }
@@ -300,7 +305,6 @@ main <- function(
   print("Created data.")
   # parallel::clusterExport(cl, "simulations")
   
-  
   #### Estimate mu (if necessary) ####
   if(use_sl){
     source("./R/estimate-nuisance.R", local=T)
@@ -409,7 +413,6 @@ main <- function(
   print("Scenario Complete!")
   stop = Sys.time()
   print(stop - start)
-  
   
   return(results)
   

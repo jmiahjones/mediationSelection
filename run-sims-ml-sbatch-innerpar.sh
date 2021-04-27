@@ -3,12 +3,12 @@
 ns=(500 1000 2000 4000)
 usesl=T
 num_sims=1000
-suffix="ml0-10-0"
+suffix="ml0-10-2"
 weightgam=cvgam
 # cores="default"
 
 scenarios=(lll lnn nnn)
-coefsizes=(large small)
+coefsizes=(large small manyp)
 
 # go coefsize -> scenario -> n
 coefidx=$(($SLURM_ARRAY_TASK_ID / 12))
